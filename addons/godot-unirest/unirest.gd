@@ -4,7 +4,18 @@ const USER_AGENT = "unirest-gdscript/1.0.0"
 
 var _default_headers = {}
 
-func _create_request(method, url, params, headers, auth, callback = null):
+"""
+Create a new request object
+
+@param {Integer} method (See HTTPClient
+@param {String} url
+@param {String | Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
+func request(method, url, params, headers, auth, callback = null):
 	var r = Request.new()
 
 	return r.client(_client)
@@ -18,34 +29,116 @@ func _create_request(method, url, params, headers, auth, callback = null):
 	.auth(auth)
 	.complete(callback)
 
+"""
+Set a default header by name and value
+
+@param {String} name
+@param {String} value
+@return {Unirest}
+"""
 func default_header(name, value):
 	_default_headers[str(name).to_lower()] = str(value)
 	return self
 
+"""
+Clear all default headers
+
+@return {Unirest}
+"""
 func clear_default_headers():
 	_default_headers.clear()
 	return self
 
+"""
+Create a GET request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func get(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_GET, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_GET, url, params, headers, auth, callback)
 
+"""
+Create a POST request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func post(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_POST, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_POST, url, params, headers, auth, callback)
 
+"""
+Create a PUT request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func put(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_PUT, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_PUT, url, params, headers, auth, callback)
 
+"""
+Create a PATCH request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func patch(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_PATCH, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_PATCH, url, params, headers, auth, callback)
 
+"""
+Create a DELETE request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func delete(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_DELETE, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_DELETE, url, params, headers, auth, callback)
 
+"""
+Create a HEAD request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func head(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_HEAD, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_HEAD, url, params, headers, auth, callback)
 
+"""
+Create an OPTIONS request
+
+@param {String} url
+@param {Dictionary} params
+@param {Dictionary} headers
+@param {Dictionary} auth
+@param {FuncRef} callback
+@return {Request}
+"""
 func options(url, params = {}, headers = {}, auth = {}, callback = null):
-	return _create_request(HTTPClient.METHOD_OPTIONS, url, params, headers, auth, callback)
+	return request(HTTPClient.METHOD_OPTIONS, url, params, headers, auth, callback)
 
 """
 Media type class to defined constants
@@ -61,6 +154,11 @@ Request builder class
 """
 class Request:
 	var _options = Options.new()
+	var _http_request = HTTPRequest.new()
+	var response
+
+	func _onrequest_completed(result, response_code, headers, body):
+		pass
 
 	"""
 	User agent for the request
@@ -100,8 +198,24 @@ class Request:
 
 		return self
 
+	"""
+	Sets the request body
+
+	@param {Mixed} value
+	@return {Request}
+	"""
 	func body(value):
 		_options.body = value
+		return self
+
+	"""
+	Sets the body size limit of the request
+
+	@param {Integer} value
+	@return {Request}
+	"""
+	func body_size_limit(value):
+		_options.body_size_limit = int(value)
 		return self
 
 	"""
@@ -112,7 +226,44 @@ class Request:
 	@return {Request}
 	"""
 	func complete(callback):
-		return end(callback)
+		if !(callback is FuncRef):
+			print("Callback must be a function reference")
+
+		_options.callback = callback
+
+		return self
+
+	"""
+	Execute the HTTP request
+
+	@return {Error}
+	"""
+	func execute():
+		_http_request.connect("request_completed", self, "_on_request_completed")
+		_http_request.body_size_limit = _options.body_size_limit
+		_http_request.max_redirects = _options.max_redirects
+		_http_request.use_threads = _options.use_threads
+
+		# Build URL
+		var url = _options.url
+		if _options.qs.size() > 0:
+			url += "?"
+			for i in _options.qs:
+				url += _options.qs[i]
+
+		# Build headers
+		var headers = PoolStringArray()
+		for i in _options.headers:
+			headers.append(str(i, ": ", _options.headers[i]))
+
+		# Execute the http request
+		return _http_request.request(
+			url,
+			headers,
+			_options.verify_ssl,
+			_options.method,
+			_options.body
+		)
 
 	"""
 	Sets header field to value
@@ -240,6 +391,16 @@ class Request:
 		return self
 
 	"""
+	Set use_threads flag
+
+	@param {Boolean} value
+	@return {Request}
+	"""
+	func use_threads(value):
+		_options.use_threads = bool(value)
+		return self
+
+	"""
 	Sets verify_ssl flag to require that SSL certificates be valid on Request.options based on given value.
 	"""
 	func verify_ssl(value):
@@ -285,6 +446,12 @@ class Options:
 	var body
 
 	"""
+	Function callback to call when request finishes
+	@type {FuncRef}
+	"""
+	var callback
+
+	"""
 	List of headers with case-sensitive fields.
 	@type {Dictionary}
 	"""
@@ -313,6 +480,12 @@ class Options:
 	@type {String}
 	"""
 	var url = ""
+
+	"""
+	Use threads for improved performance
+	@type {Boolean}
+	"""
+	var use_threads = true
 
 	"""
 	Sets verify_ssl flag to require that SSL certificates be valid on Request.options based on given value.
