@@ -1,4 +1,4 @@
-# Unirest for GDScript (Godot Engine v3.0)
+# Unirest for Godot Engine (v3.0)
 
 [![License][pypi-license]][license-url]
 ![][unirest-logo]
