@@ -1,7 +1,8 @@
-extends Resource
+extends Node
 
 const USER_AGENT = "unirest-gdscript/1.0.0"
 
+var _default_user_agent = USER_AGENT
 var _default_headers = {}
 
 """
@@ -28,6 +29,25 @@ func request(method, url, params, headers, auth, callback = null):
 	.query(params)
 	.auth(auth)
 	.complete(callback)
+
+"""
+Sets the default user agent
+
+@param {String} value
+@return {Unirest}
+"""
+func default_user_agent(value):
+	_default_user_agent = str(value)
+	return self
+
+"""
+Reset the default user agent
+
+@return {Unirest}
+"""
+func reset_default_user_agent():
+	_default_user_agent = USER_AGENT
+	return self
 
 """
 Set a default header by name and value
