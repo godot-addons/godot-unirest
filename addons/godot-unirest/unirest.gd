@@ -177,8 +177,11 @@ class Request:
 	var _http_request = HTTPRequest.new()
 	var response
 
-	func _onrequest_completed(result, response_code, headers, body):
-		pass
+	"""
+	Signal handler for when HTTP request completes
+	"""
+	func _on_request_completed(result, response_code, headers, body):
+		var r = Response(result, response_code, headers, body)
 
 	"""
 	User agent for the request
@@ -432,21 +435,58 @@ class Request:
 Response class holding data about the response
 """
 class Response:
-	var code
-	var headers
-	var raw_body
+	"""
+	Result (See HTTPRequest.RESULT_)
+	@type {Integer}
+	"""
+	var result = 0
+
+	"""
+	HTTP response code
+	@type {Integer}
+	"""
+	var response_code = 0
+
+	"""
+	HTTP response headers
+	@type {Dictionary}
+	"""
+	var headers = {}
+
+	"""
+	HTTP response body
+	@type {PoolByteArray}
+	"""
+	var raw_body = PoolByteArray()
+
+	"""
+	HTTP response body marshalled based on content-type
+	@type {Mixed}
+	"""
 	var body
 
-	func _init(code_, headers_, body_):
-		code = int(code_)
-		headers = headers_
-		body = body_
+	func _init(result_, response_code_, headers_, body_):
+		result = int(result_)
+		response_code = int(response_code_)
+		raw_body = body_
 
-		if headers.has("Content-Encoding"):
-			pass
+		# Parse headers into a dictionary
+		for i in headers_:
+			var h = headers_[i].split(":")
+			headers[h[0].to_lower()] = h[1]
 
-		if headers.has("Content-Type") && headers["Content-Type"] == MediaType.APPLICATION_JSON:
-			pass
+		# Check for content-type and marshall body from JSON or other types
+		if headers.has("content-type"):
+			match headers["content-type"]:
+				MediaType.APPLICATION_JSON:
+					body = parse_json(body_.get_string_from_utf8())
+					print("body=", body)
+				MediaType.TEXT_PLAIN:
+					body = body.get_string_from_utf8()
+				MediaType.TEXT_HTML:
+					body = body.get_string_from_utf8()
+				_: body = body.get_string_from_utf8()
+
 
 """
 Request option container for details about the request.
