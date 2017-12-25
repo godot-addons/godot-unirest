@@ -19,7 +19,7 @@ Create a new request object
 func request(method, url, params, headers, auth, callback = null):
 	var r = Request.new()
 
-	return r.client(_client)
+	return r.auth(auth)
 	.header("user-agent", USER_AGENT)
 	.header("accept-encoding", "gzip")
 	.headers(_default_headers)
@@ -27,7 +27,6 @@ func request(method, url, params, headers, auth, callback = null):
 	.method(method)
 	.url(url)
 	.query(params)
-	.auth(auth)
 	.complete(callback)
 
 """
@@ -170,6 +169,127 @@ class MediaType:
 	const TEXT_HTML = "text/html"
 
 """
+Response class holding data about the response
+"""
+class Response:
+	"""
+	Result (See HTTPRequest.RESULT_)
+	@type {Integer}
+	"""
+	var result = 0
+
+	"""
+	HTTP response code
+	@type {Integer}
+	"""
+	var response_code = 0
+
+	"""
+	HTTP response headers
+	@type {Dictionary}
+	"""
+	var headers = {}
+
+	"""
+	HTTP response body
+	@type {PoolByteArray}
+	"""
+	var raw_body = PoolByteArray()
+
+	"""
+	HTTP response body marshalled based on content-type
+	@type {Mixed}
+	"""
+	var body
+
+	func _init(result_, response_code_, headers_, body_):
+		result = int(result_)
+		response_code = int(response_code_)
+		raw_body = body_
+
+		# Parse headers into a dictionary
+		for i in headers_:
+			var h = headers_[i].split(":")
+			headers[h[0].to_lower()] = h[1]
+
+		# Check for content-type and marshall body from JSON or other types
+		if headers.has("content-type"):
+			match headers["content-type"]:
+				MediaType.APPLICATION_JSON:
+					body = parse_json(body_.get_string_from_utf8())
+					print("body=", body)
+				MediaType.TEXT_PLAIN:
+					body = body.get_string_from_utf8()
+				MediaType.TEXT_HTML:
+					body = body.get_string_from_utf8()
+				_: body = body.get_string_from_utf8()
+
+"""
+Request option container for details about the request.
+@type {Variant}
+"""
+class Options:
+	"""
+	See Request.auth()
+	@type {Dictionary}
+	"""
+	var auth
+
+	"""
+	Entity body for certain requests
+	@type {String | Dictionary}
+	"""
+	var body
+
+	"""
+	Function callback to call when request finishes
+	@type {FuncRef}
+	"""
+	var callback
+
+	"""
+	List of headers with case-sensitive fields.
+	@type {Dictionary}
+	"""
+	var headers = {}
+
+	"""
+	Maximum redirects to follow
+	@type {Integer}
+	"""
+	var max_redirects = 5
+
+	"""
+	Method obtained from request method arguments.
+	@type {Integer}
+	"""
+	var method = HTTPClient.METHOD_GET
+
+	"""
+	Object consisting of querystring values to append to url upon request.
+	@type {PoolStringArray}
+	"""
+	var qs = PoolStringArray()
+
+	"""
+	Url obtained from request method arguments.
+	@type {String}
+	"""
+	var url = ""
+
+	"""
+	Use threads for improved performance
+	@type {Boolean}
+	"""
+	var use_threads = true
+
+	"""
+	Sets verify_ssl flag to require that SSL certificates be valid on Request.options based on given value.
+	@type {Boolean}
+	"""
+	var verify_ssl = true
+
+"""
 Request builder class
 """
 class Request:
@@ -182,6 +302,9 @@ class Request:
 	"""
 	func _on_request_completed(result, response_code, headers, body):
 		var r = Response(result, response_code, headers, body)
+
+		if _options.callback != null:
+			_options.callback.call_func(r)
 
 	"""
 	User agent for the request
@@ -211,7 +334,7 @@ class Request:
 				"password": str(user["password"]),
 				"send_immediately": bool(user["send_immediately"])
 			}
-			h["authorization"] = str("Basic ", Marshalls.utf8_to_base64(str(user, ":", password)))
+#			h["authorization"] = str("Basic ", Marshalls.utf8_to_base64(str(user, ":", password)))
 		else:
 			_options.auth = {
 				"user": str(user),
@@ -401,8 +524,8 @@ class Request:
 		#url = parts[0].replace(" ", "%20")
 		_options.url = parts[0]
 
-		if len(url_parts) == 2:
-			var query_params = url_parts[1].split("\\&")
+		if len(parts) == 2:
+			var query_params = parts[1].split("\\&")
 
 			# [0]: name=Bob, [1]: age=32
 			for i in query_params:
@@ -429,126 +552,3 @@ class Request:
 	func verify_ssl(value):
 		_options.verify_ssl = bool(value)
 		return self
-
-
-"""
-Response class holding data about the response
-"""
-class Response:
-	"""
-	Result (See HTTPRequest.RESULT_)
-	@type {Integer}
-	"""
-	var result = 0
-
-	"""
-	HTTP response code
-	@type {Integer}
-	"""
-	var response_code = 0
-
-	"""
-	HTTP response headers
-	@type {Dictionary}
-	"""
-	var headers = {}
-
-	"""
-	HTTP response body
-	@type {PoolByteArray}
-	"""
-	var raw_body = PoolByteArray()
-
-	"""
-	HTTP response body marshalled based on content-type
-	@type {Mixed}
-	"""
-	var body
-
-	func _init(result_, response_code_, headers_, body_):
-		result = int(result_)
-		response_code = int(response_code_)
-		raw_body = body_
-
-		# Parse headers into a dictionary
-		for i in headers_:
-			var h = headers_[i].split(":")
-			headers[h[0].to_lower()] = h[1]
-
-		# Check for content-type and marshall body from JSON or other types
-		if headers.has("content-type"):
-			match headers["content-type"]:
-				MediaType.APPLICATION_JSON:
-					body = parse_json(body_.get_string_from_utf8())
-					print("body=", body)
-				MediaType.TEXT_PLAIN:
-					body = body.get_string_from_utf8()
-				MediaType.TEXT_HTML:
-					body = body.get_string_from_utf8()
-				_: body = body.get_string_from_utf8()
-
-
-"""
-Request option container for details about the request.
-@type {Variant}
-"""
-class Options:
-	"""
-	See Request.auth()
-	@type {Dictionary}
-	"""
-	var auth
-
-	"""
-	Entity body for certain requests
-	@type {String | Dictionary}
-	"""
-	var body
-
-	"""
-	Function callback to call when request finishes
-	@type {FuncRef}
-	"""
-	var callback
-
-	"""
-	List of headers with case-sensitive fields.
-	@type {Dictionary}
-	"""
-	var headers = {}
-
-	"""
-	Maximum redirects to follow
-	@type {Integer}
-	"""
-	var max_redirects = 5
-
-	"""
-	Method obtained from request method arguments.
-	@type {Integer}
-	"""
-	var method = HTTPClient.METHOD_GET
-
-	"""
-	Object consisting of querystring values to append to url upon request.
-	@type {PoolStringArray}
-	"""
-	var qs = PoolStringArray()
-
-	"""
-	Url obtained from request method arguments.
-	@type {String}
-	"""
-	var url = ""
-
-	"""
-	Use threads for improved performance
-	@type {Boolean}
-	"""
-	var use_threads = true
-
-	"""
-	Sets verify_ssl flag to require that SSL certificates be valid on Request.options based on given value.
-	@type {Boolean}
-	"""
-	var verify_ssl = true
