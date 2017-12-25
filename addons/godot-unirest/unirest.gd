@@ -242,6 +242,12 @@ class Options:
 	var body
 
 	"""
+	Body size limit for request
+	@type {Integer}
+	"""
+	var body_size_limit = 0
+
+	"""
 	Function callback to call when request finishes
 	@type {FuncRef}
 	"""
@@ -406,13 +412,33 @@ class Request:
 		for i in _options.headers:
 			headers.append(str(i, ": ", _options.headers[i]))
 
+		# Build body string based on content-type header
+		var body
+		var body_type = typeof(_options.body)
+
+		match body_type:
+			# body is PoolByteArray, get the string
+			TYPE_RAW_ARRAY: body = _options.body.get_string_from_utf8()
+
+			# body is already a string
+			TYPE_STRING: body = _options.body
+
+			# body is nil/null
+			TYPE_NIL: body = ""
+
+			# all others
+			_:
+				if headers.has("content-type"):
+					match headers["content-type"]:
+						MediaType.APPLICATION_JSON: body = to_json(_options.body)
+
 		# Execute the http request
 		return _http_request.request(
 			url,
 			headers,
 			_options.verify_ssl,
 			_options.method,
-			_options.body
+			body
 		)
 
 	"""
