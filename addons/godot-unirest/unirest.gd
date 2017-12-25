@@ -78,7 +78,7 @@ Create a GET request
 @param {FuncRef} callback
 @return {Request}
 """
-func get(url, params = {}, headers = {}, auth = {}, callback = null):
+func get(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_GET, url, params, headers, auth, callback)
 
 """
@@ -91,7 +91,7 @@ Create a POST request
 @param {FuncRef} callback
 @return {Request}
 """
-func post(url, params = {}, headers = {}, auth = {}, callback = null):
+func post(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_POST, url, params, headers, auth, callback)
 
 """
@@ -104,7 +104,7 @@ Create a PUT request
 @param {FuncRef} callback
 @return {Request}
 """
-func put(url, params = {}, headers = {}, auth = {}, callback = null):
+func put(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_PUT, url, params, headers, auth, callback)
 
 """
@@ -117,7 +117,7 @@ Create a PATCH request
 @param {FuncRef} callback
 @return {Request}
 """
-func patch(url, params = {}, headers = {}, auth = {}, callback = null):
+func patch(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_PATCH, url, params, headers, auth, callback)
 
 """
@@ -130,7 +130,7 @@ Create a DELETE request
 @param {FuncRef} callback
 @return {Request}
 """
-func delete(url, params = {}, headers = {}, auth = {}, callback = null):
+func delete(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_DELETE, url, params, headers, auth, callback)
 
 """
@@ -143,7 +143,7 @@ Create a HEAD request
 @param {FuncRef} callback
 @return {Request}
 """
-func head(url, params = {}, headers = {}, auth = {}, callback = null):
+func head(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_HEAD, url, params, headers, auth, callback)
 
 """
@@ -156,7 +156,7 @@ Create an OPTIONS request
 @param {FuncRef} callback
 @return {Request}
 """
-func options(url, params = {}, headers = {}, auth = {}, callback = null):
+func options(url, params = {}, headers = {}, auth = null, callback = null):
 	return request(HTTPClient.METHOD_OPTIONS, url, params, headers, auth, callback)
 
 """
@@ -329,6 +329,10 @@ class Request:
 	"""
 	func auth(user, password = null, send_immediately = true):
 		if typeof(user) == TYPE_DICTIONARY:
+			if !user.has("user") || !user.has("password") || !user.has("send_immediately"):
+				print("Invalid auth dictionary")
+				return self
+
 			_options.auth = {
 				"user": str(user["user"]),
 				"password": str(user["password"]),
