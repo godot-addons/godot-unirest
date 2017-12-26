@@ -4,6 +4,7 @@ const USER_AGENT = "unirest-gdscript/1.0.0"
 
 var _default_user_agent = USER_AGENT
 var _default_headers = {}
+var _client = HTTPClient.new()
 
 """
 Create a new request object
@@ -18,10 +19,11 @@ Create a new request object
 """
 func request(method, url, params, headers, auth, callback = null):
 	var r = Request.new()
+	add_child(r)
 
 	print("UNIREST: request=", url, ", params=", params)
 
-	r.auth(auth)
+	r.client(_client).auth(auth)
 	r.header("user-agent", USER_AGENT).header("accept-encoding", "gzip").headers(_default_headers).headers(headers)
 	r.method(method).url(url).query(params).complete(callback)
 
@@ -252,6 +254,12 @@ class Options:
 	var callback
 
 	"""
+	HTTP cilent for the request
+	@type {HTTPClient}
+	"""
+	var client
+
+	"""
 	List of headers with case-sensitive fields.
 	@type {Dictionary}
 	"""
@@ -298,17 +306,17 @@ Request builder class
 """
 class Request:
 	var _options = Options.new()
-	var _http_request = HTTPRequest.new()
 	var response
 
 	"""
 	Signal handler for when HTTP request completes
 	"""
 	func _on_request_completed(result, response_code, headers, body):
-		var r = Response(result, response_code, headers, body)
+		response = Response(result, response_code, headers, body)
+		print("UNIREST: response=", response)
 
 		if _options.callback != null:
-			_options.callback.call_func(r)
+			_options.callback.call_func(response)
 
 	"""
 	User agent for the request
@@ -374,6 +382,19 @@ class Request:
 	"""
 	func body_size_limit(value):
 		_options.body_size_limit = int(value)
+		return self
+
+	"""
+	Set the HTTP client for the request
+
+	@param {HTTPClient} value
+	@return {Request}
+	"""
+	func client(value):
+		if !(client is HTTPClient):
+			return print("Client is not a HTTPClient object")
+		_options.client = client
+
 		return self
 
 	"""
@@ -571,9 +592,6 @@ class Request:
 			# [0]: name=Bob, [1]: age=32
 			for i in query_params:
 				query(query_params[i])
-
-		if url.begins_with("https"):
-			ssl(true)
 
 		return self
 
