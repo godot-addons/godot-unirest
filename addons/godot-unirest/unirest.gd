@@ -1,10 +1,27 @@
 extends Node
 
+const HttpClient = preload("res://addons/godot-unirest/http_client.gd")
+
 const USER_AGENT = "unirest-gdscript/1.0.0"
 
 var _default_user_agent = USER_AGENT
 var _default_headers = {}
-var _client = HTTPClient.new()
+#var _client = HTTPClient.new()
+var _client
+
+"""
+Factory method to create a new unirest object
+"""
+static func create(url):
+	return new(HttpClient.create_client(url))
+
+"""
+Constructor
+
+@param {HttpClient} client
+"""
+func _init(client):
+	_client = client
 
 """
 Create a new request object
@@ -19,7 +36,6 @@ Create a new request object
 """
 func request(method, url, params, headers, auth, callback = null):
 	var r = Request.new()
-	add_child(r)
 
 	print("UNIREST: request=", url, ", params=", params)
 
@@ -308,6 +324,10 @@ class Request:
 	var _options = Options.new()
 	var response
 
+	func _on_disconnected():
+		print("Client disconnected")
+		_options.client.close()
+
 	"""
 	Signal handler for when HTTP request completes
 	"""
@@ -391,9 +411,9 @@ class Request:
 	@return {Request}
 	"""
 	func client(value):
-		if !(client is HTTPClient):
+		if !(value is HTTPClient):
 			return print("Client is not a HTTPClient object")
-		_options.client = client
+		_options.client = value
 
 		return self
 
