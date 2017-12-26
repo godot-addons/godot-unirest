@@ -19,15 +19,13 @@ Create a new request object
 func request(method, url, params, headers, auth, callback = null):
 	var r = Request.new()
 
-	return r.auth(auth)
-	.header("user-agent", USER_AGENT)
-	.header("accept-encoding", "gzip")
-	.headers(_default_headers)
-	.headers(headers)
-	.method(method)
-	.url(url)
-	.query(params)
-	.complete(callback)
+	print("UNIREST: request=", url, ", params=", params)
+
+	r.auth(auth)
+	r.header("user-agent", USER_AGENT).header("accept-encoding", "gzip").headers(_default_headers).headers(headers)
+	r.method(method).url(url).query(params).complete(callback)
+
+	return r
 
 """
 Sets the default user agent
@@ -334,6 +332,8 @@ class Request:
 	@return Request
 	"""
 	func auth(user, password = null, send_immediately = true):
+		print("aut():start")
+
 		if typeof(user) == TYPE_DICTIONARY:
 			if !user.has("user") || !user.has("password") || !user.has("send_immediately"):
 				print("Invalid auth dictionary")
@@ -351,6 +351,8 @@ class Request:
 				"password": str(password),
 				"send_immediately": bool(send_immediately)
 			}
+
+		print("auth():stop")
 
 		return self
 
@@ -382,7 +384,7 @@ class Request:
 	@return {Request}
 	"""
 	func complete(callback):
-		if !(callback is FuncRef):
+		if callback != null && !(callback is FuncRef):
 			print("Callback must be a function reference")
 
 		_options.callback = callback
@@ -432,14 +434,20 @@ class Request:
 					match headers["content-type"]:
 						MediaType.APPLICATION_JSON: body = to_json(_options.body)
 
+		print("UNIREST: url=", url, ", headers=", headers, ", method=", _options.method, ", body=", body)
+
 		# Execute the http request
-		return _http_request.request(
+		var status = _http_request.request(
 			url,
 			headers,
 			_options.verify_ssl,
 			_options.method,
 			body
 		)
+
+		print("UNIREST: status=", status)
+
+		return status
 
 	"""
 	Sets header field to value
@@ -449,7 +457,9 @@ class Request:
 	@return {Request}
 	"""
 	func header(name, value):
+		print("header():start")
 		_options.headers[str(name).to_lower()] = value
+		print("header():stop")
 		return self
 
 	"""
@@ -551,6 +561,7 @@ class Request:
 
 		# Encode URL
 		var parts = url.split("\\?")
+		print("parts=", parts)
 		#url = parts[0].replace(" ", "%20")
 		_options.url = parts[0]
 
