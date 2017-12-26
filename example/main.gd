@@ -1,8 +1,8 @@
 extends Node
 
-const Unirest = preload("res://addons/godot-unirest/unirest.gd")
+const BASE_URL = "https://api.mydomain.com/v1"
 
-onready var unirest = Unirest.create("https://api.mydomain.com/v1")
+onready var unirest = preload("res://addons/godot-unirest/unirest.gd").create(BASE_URL)
 
 func test():
 	# Set some default headers for all requests
