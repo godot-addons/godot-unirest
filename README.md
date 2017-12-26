@@ -62,7 +62,7 @@ var response = unirest.post("http://httpbin.org/post", { "Accept": "application/
 )
 ```
 
-**Note**: For the sake of semplicity, even with custom entities in the body, the keyword argument is still `params` (instead of `data` for example). I'm looking for feedback on this.
+**Note**: For the sake of simplicity, even with custom entities in the body, the keyword argument is still `params` (instead of `data` for example). I'm looking for feedback on this.
 
 ### Basic Authentication
 
